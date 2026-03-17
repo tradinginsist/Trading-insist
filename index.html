@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Trading Insist — 模擬交易平台</title>
@@ -191,6 +193,18 @@
 </style>
 </head>
 <body>
+  <div id="login-overlay" style="position:fixed; inset:0; background:#0a0e1a; z-index:9999; display:flex; align-items:center; justify-content:center; flex-direction:column;">
+    <div style="background:#0f1525; border:1px solid #1e2d4a; border-radius:16px; padding:2.5rem; text-align:center;">
+        <h2 style="color:#00e5ff; margin-bottom:1rem;">TRADING INSIST</h2>
+        <p style="color:#8899bb; margin-bottom:2rem;">請登入以同步您的交易存檔</p>
+        <div id="g_id_onload"
+             data-client_id="72739400749-0u8qmvp1fsm3kbiu76kuk3ka1mvac6no.apps.googleusercontent.com"
+             data-callback="handleCredentialResponse">
+        </div>
+        <div class="g_id_signin" data-type="standard"></div>
+    </div>
+</div>
+
 
 <!-- SETUP -->
 <div id="setup-screen">
@@ -393,6 +407,34 @@
 </div>
 
 <script>
+  // --- Google 登入與存檔邏輯 ---
+let currentUser = null;
+
+function handleCredentialResponse(response) {
+    const payload = JSON.parse(atob(response.credential.split('.')[1]));
+    currentUser = { id: payload.sub, name: payload.name, photo: payload.picture };
+    
+    // 隱藏登入畫面
+    document.getElementById('login-overlay').style.display = 'none';
+    
+    // 嘗試載入該使用者的進度
+    const savedData = localStorage.getItem(`trading_save_${currentUser.id}`);
+    if (savedData) {
+        state = JSON.parse(savedData); // 覆蓋目前的 state
+    }
+    
+    // 執行你原本的初始化功能
+    if (typeof initApp === "function") initApp();
+    if (typeof updateUI === "function") updateUI();
+}
+
+// 修改你原本的存檔動作，改為根據 User ID 存檔
+function saveUserData() {
+    if (currentUser) {
+        localStorage.setItem(`trading_save_${currentUser.id}`, JSON.stringify(state));
+    }
+}
+
 const INITIAL_CASH = 1000000;
 // Yahoo Finance - no API key needed
 let selectedStock = null; // {code, name, price, change, isRealtime}

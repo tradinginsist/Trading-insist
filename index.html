@@ -204,6 +204,13 @@
         <div class="g_id_signin" data-type="standard"></div>
     </div>
 </div>
+// 確保所有「抽屜」都預先打開，才不會出現 undefined 錯誤
+let state = { 
+  cash: INITIAL_CASH, 
+  holdings: {}, 
+  trades: [],    // 之前可能漏了這行或被洗掉了
+  posts: []      // 確保社群貼文也不會噴錯
+};
 
 
 <!-- SETUP -->

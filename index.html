@@ -1,115 +1,20 @@
-<!DOCTYPE html>
-<html lang="zh-TW">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Trading Insist — 模擬交易平台</title>
-<script src="https://accounts.google.com/gsi/client" async defer></script>
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --bg:#0a0e1a;--bg2:#0f1525;--bg3:#151d30;--border:#1e2d4a;
-    --accent:#00e5ff;--accent2:#7c3aed;--green:#00e676;--red:#ff1744;
-    --yellow:#ffd600;--text:#e8f0fe;--text2:#8899bb;--text3:#445577;
-    --card:#111827;--mono:'Space Mono',monospace;--sans:'Noto Sans TC',sans-serif;
-  }
-  *{margin:0;padding:0;box-sizing:border-box;}
-  body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;overflow-x:hidden;}
-  body::before{content:'';position:fixed;inset:0;z-index:0;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:40px 40px;opacity:0.25;pointer-events:none;}
-
-  /* 登入畫面遮罩 */
-  #login-overlay { position: fixed; inset: 0; background: var(--bg); z-index: 9999; display: flex; align-items: center; justify-content: center; flex-direction: column; }
-  .setup-box { background:var(--bg2); border:1px solid var(--border); border-radius:16px; padding:2.5rem; width:500px; max-width:90vw; text-align:center; }
-  .setup-logo { font-family:var(--mono); font-size:1.4rem; color:var(--accent); letter-spacing:3px; font-weight:700; margin-bottom:0.5rem; }
-
-  /* NAV */
-  nav{position:sticky;top:0;z-index:100;background:rgba(10,14,26,0.92);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 2rem;height:60px;}
-  .nav-logo{font-family:var(--mono);font-size:1.1rem;color:var(--accent);letter-spacing:2px;font-weight:700;}
-  .nav-tabs{display:flex;gap:0.25rem;}
-  .nav-tab{padding:0.4rem 1rem;border-radius:6px;cursor:pointer;font-size:0.85rem;color:var(--text2);border:none;background:none;transition:all 0.2s;}
-  .nav-tab.active{color:var(--accent);background:rgba(0,229,255,0.08);}
-  .user-profile { display: flex; align-items: center; gap: 8px; cursor: pointer; border: 1px solid var(--border); padding: 4px 10px; border-radius: 20px; }
-  .user-avatar { width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--accent); }
-
-  /* UI 主要樣式繼承你原本的設定... (省略重複的 200 行 CSS 以節省篇幅，請保留你原有的 CSS) */
-  .page{display:none;padding:2rem;max-width:1400px;margin:0 auto;}
-  .page.active{display:block;}
-  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.5rem;margin-bottom:1rem;}
-  .up{color:var(--green)}.down{color:var(--red)}
-  table{width:100%;border-collapse:collapse;}
-  td,th{padding:0.75rem;text-align:left;border-bottom:1px solid var(--border);}
-  #toast{position:fixed;bottom:2rem;right:2rem;z-index:999;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:1rem;opacity:0;transition:0.3s;}
-  #toast.show{opacity:1;}
-</style>
-</head>
-<body>
-
-<div id="login-overlay">
-  <div class="setup-box">
-    <div class="setup-logo">TRADING <span>INSIST</span></div>
-    <div style="margin-bottom:2rem;">請登入以載入存檔</div>
-    <div id="g_id_onload" data-client_id="YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com" data-callback="handleCredentialResponse"></div>
-    <div class="g_id_signin" data-type="standard"></div>
-  </div>
-</div>
-
-<nav>
-  <div class="nav-logo">TRADING <span>INSIST</span></div>
-  <div class="nav-tabs">
-    <button class="nav-tab active" onclick="showPage('dashboard',this)">總覽</button>
-    <button class="nav-tab" onclick="showPage('trade',this)">交易</button>
-    <button class="nav-tab" onclick="showPage('leaderboard',this)">排行榜</button>
-    <button class="nav-tab" onclick="showPage('community',this)">社群</button>
-  </div>
-  <div class="nav-right">
-    <span id="api-badge" class="api-badge">API 連線中</span>
-    <span class="nav-cash" id="nav-cash">$1,000,000</span>
-    <div class="user-profile" onclick="logout()">
-        <img id="user-photo" class="user-avatar" src="">
-        <span id="user-name">帳號</span>
-    </div>
-  </div>
-</nav>
-
 <div class="page active" id="page-dashboard">
-  <div class="card">
-    <h2 id="welcome-name">歡迎</h2>
-    <div id="market-status-sub" style="color:var(--text3)">市場連線中...</div>
-    <div id="total-assets" style="font-size:2rem; font-weight:900;">$1,000,000</div>
+  <div class="page-header">
+    <div class="page-title">早安，<span id="welcome-name">交易員</span> 👋</div>
+    <div class="page-sub" id="market-status-sub">載入中...</div>
   </div>
-  <div class="card">
-    <h3>我的持倉</h3>
-    <table>
-      <thead><tr><th>股票</th><th>持股</th><th>現價</th></tr></thead>
-      <tbody id="holdings-body"></tbody>
-    </table>
+  <div class="dash-grid">
+    <div class="stat-card"><div class="stat-label">總資產</div><div class="stat-value neutral" id="total-assets">$1,000,000</div></div>
+    <div class="stat-card"><div class="stat-label">排行榜名次</div><div class="stat-value neutral" id="my-rank">#--</div></div>
   </div>
-</div>
-
-<div class="page" id="page-trade">
-  <div class="card">
-    <input id="stock-search" type="text" placeholder="輸入代號 (如 2330)">
-    <button onclick="triggerSearch()">查詢</button>
-    <div id="price-display" style="margin-top:10px; display:none;">
-        <span id="stock-name-display"></span> : <span id="current-price-display"></span>
+  <div class="dash-main">
+    <div class="card">
+      <div class="section-title"><span class="dot"></span> 我的持倉</div>
+      <table>
+        <thead><tr><th>股票</th><th>持股</th><th>現價</th><th>損益</th></tr></thead>
+        <tbody id="holdings-body"></tbody>
+      </table>
     </div>
-    <div style="margin-top:15px;">
-        <input type="number" id="trade-qty" placeholder="張數">
-        <button onclick="executeTrade('buy')" class="up">買入</button>
-        <button onclick="executeTrade('sell')" class="down">賣出</button>
-    </div>
-  </div>
-</div>
-
-<div class="page" id="page-leaderboard">
-  <div class="card"><h3>排行榜</h3><div id="leaderboard-list"></div></div>
-</div>
-
-<div class="page" id="page-community">
-  <div class="card">
-    <textarea id="post-input" placeholder="想說什麼？"></textarea>
-    <button onclick="submitPost()">發布</button>
-    <div id="posts-container" style="margin-top:20px;"></div>
   </div>
 </div>
 
@@ -122,36 +27,39 @@ let currentUser = null;
 let state = { cash: INITIAL_CASH, holdings: {}, trades: [], posts: [] };
 let selectedStock = null;
 
-// ── 1. Google 登入 ──
+// ── 1. Google 登入與存檔邏輯 ──
 function handleCredentialResponse(response) {
-    const payload = JSON.parse(atob(response.credential.split('.')[1]));
-    currentUser = { id: payload.sub, name: payload.name, photo: payload.picture };
-    
-    document.getElementById('login-overlay').style.display = 'none';
-    document.getElementById('user-name').textContent = currentUser.name;
-    document.getElementById('user-photo').src = currentUser.photo;
-    document.getElementById('welcome-name').textContent = "早安, " + currentUser.name;
-    
-    loadUserData();
-    initApp();
+  const payload = JSON.parse(atob(response.credential.split('.')[1]));
+  currentUser = { id: payload.sub, name: payload.name, photo: payload.picture };
+  
+  document.getElementById('login-overlay').style.display = 'none';
+  document.getElementById('user-name').textContent = currentUser.name;
+  document.getElementById('user-photo').src = currentUser.photo;
+  document.getElementById('welcome-name').textContent = currentUser.name;
+  
+  loadUserData();
+  initApp();
 }
 
-// ── 2. 資料存取 ──
 function saveUserData() {
-    if (!currentUser) return;
-    localStorage.setItem(`trade_insist_${currentUser.id}`, JSON.stringify(state));
+  if (!currentUser) return;
+  localStorage.setItem(`trading_save_${currentUser.id}`, JSON.stringify(state));
 }
 
 function loadUserData() {
-    const saved = localStorage.getItem(`trade_insist_${currentUser.id}`);
-    if (saved) state = JSON.parse(saved);
-    updateUI();
+  const saved = localStorage.getItem(`trading_save_${currentUser.id}`);
+  if (saved) {
+    state = JSON.parse(saved);
+    showToast("進度已自動同步", "success");
+  }
+  updateUI();
 }
 
-// ── 3. 交易與報價 (整合 API 測試) ──
+// ── 2. 報價與交易邏輯 (對接 Yahoo API) ──
 async function fetchQuote(code) {
+  const proxy = `https://api.allorigins.win/raw?url=${encodeURIComponent('https://query1.finance.yahoo.com/v8/finance/chart/'+code+'.TW')}`;
   try {
-    const r = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent('https://query1.finance.yahoo.com/v8/finance/chart/'+code+'.TW')}`);
+    const r = await fetch(proxy);
     const d = await r.json();
     const meta = d?.chart?.result?.[0]?.meta;
     return meta ? { code, name: meta.shortName, price: meta.regularMarketPrice } : null;
@@ -159,97 +67,113 @@ async function fetchQuote(code) {
 }
 
 async function triggerSearch() {
-  const code = document.getElementById('stock-search').value;
+  const code = document.getElementById('stock-search').value.trim();
+  if(!code) return;
   const q = await fetchQuote(code);
-  if (q) {
+  if(q) {
     selectedStock = q;
-    document.getElementById('price-display').style.display = 'block';
+    document.getElementById('price-display').style.display = 'flex';
+    document.getElementById('current-price-display').textContent = q.price.toFixed(2);
     document.getElementById('stock-name-display').textContent = q.name;
-    document.getElementById('current-price-display').textContent = q.price;
+    updateUI();
   } else {
-    showToast("搜尋失敗", "error");
+    showToast("查無代碼", "error");
   }
 }
 
 function executeTrade(type) {
-    const qty = parseInt(document.getElementById('trade-qty').value);
-    if (!selectedStock || !qty) return;
-    
-    const cost = selectedStock.price * qty * 1000;
-    if (type === 'buy') {
-        if (state.cash < cost) return showToast("錢不夠");
-        state.cash -= cost;
-        state.holdings[selectedStock.code] = (state.holdings[selectedStock.code] || 0) + qty;
-    } else {
-        if ((state.holdings[selectedStock.code] || 0) < qty) return showToast("持股不足");
-        state.cash += cost;
-        state.holdings[selectedStock.code] -= qty;
-    }
-    saveUserData();
-    updateUI();
-    showToast("交易成功");
+  const qty = parseInt(document.getElementById('trade-qty').value);
+  if(!selectedStock || !qty || qty <= 0) return showToast("請檢查輸入", "error");
+  
+  const cost = selectedStock.price * qty * 1000;
+  if(type === 'buy') {
+    if(state.cash < cost) return showToast("資金不足", "error");
+    state.cash -= cost;
+    state.holdings[selectedStock.code] = (state.holdings[selectedStock.code] || 0) + qty;
+  } else {
+    if((state.holdings[selectedStock.code] || 0) < qty) return showToast("持股不足", "error");
+    state.cash += cost;
+    state.holdings[selectedStock.code] -= qty;
+    if(state.holdings[selectedStock.code] === 0) delete state.holdings[selectedStock.code];
+  }
+  
+  saveUserData();
+  updateUI();
+  showToast("交易成功！");
 }
 
-// ── 4. UI 渲染 ──
+// ── 3. UI 渲染 ──
 function updateUI() {
-    document.getElementById('nav-cash').textContent = "$" + state.cash.toLocaleString();
-    document.getElementById('total-assets').textContent = "$" + state.cash.toLocaleString();
-    
-    const tbody = document.getElementById('holdings-body');
-    tbody.innerHTML = Object.keys(state.holdings).map(code => 
-        `<tr><td>${code}</td><td>${state.holdings[code]}</td><td>--</td></tr>`
-    ).join('');
-    
-    renderPosts();
-    renderLeaderboard();
+  document.getElementById('nav-cash').textContent = `$${state.cash.toLocaleString()}`;
+  document.getElementById('total-assets').textContent = `$${state.cash.toLocaleString()}`;
+  
+  const tbody = document.getElementById('holdings-body');
+  tbody.innerHTML = Object.keys(state.holdings).map(code => `
+    <tr>
+      <td><span class="stock-code">${code}</span></td>
+      <td>${state.holdings[code]}</td>
+      <td>--</td>
+      <td>--</td>
+    </tr>
+  `).join('');
+  
+  renderPosts();
+  renderLeaderboard();
 }
 
 function renderPosts() {
-    const container = document.getElementById('posts-container');
-    container.innerHTML = state.posts.map(p => `
-        <div class="card"><strong>${p.user}</strong>: ${p.content}</div>
-    `).join('');
+  const container = document.getElementById('posts-container');
+  if(!container) return;
+  container.innerHTML = state.posts.map(p => `
+    <div class="post-card">
+      <strong>${p.user}</strong>: ${p.content}
+    </div>
+  `).join('');
 }
 
 function submitPost() {
-    const input = document.getElementById('post-input');
-    if (!input.value) return;
-    state.posts.unshift({ user: currentUser.name, content: input.value });
-    input.value = '';
-    saveUserData();
-    renderPosts();
+  const input = document.getElementById('post-input');
+  if(!input.value.trim()) return;
+  state.posts.unshift({ user: currentUser.name, content: input.value });
+  input.value = '';
+  saveUserData();
+  renderPosts();
 }
 
 function renderLeaderboard() {
-    const list = document.getElementById('leaderboard-list');
-    list.innerHTML = `<div class="card">1. ${currentUser?.name || '玩家'} - 資產: ${state.cash}</div>`;
+  const list = document.getElementById('leaderboard-list');
+  if(!list) return;
+  list.innerHTML = `<div class="rank-row">#1 ${currentUser?.name || '您'} - $${state.cash.toLocaleString()}</div>`;
 }
 
-function showPage(id, btn) {
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    document.getElementById('page-' + id).classList.add('active');
-    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-    btn.classList.add('active');
+// ── 4. 初始化 ──
+function initApp() {
+  const now = new Date();
+  const sub = document.getElementById('market-status-sub');
+  sub.textContent = (now.getHours() >= 9 && now.getHours() < 14) ? "台股交易中 🟢" : "已收盤 🔴";
+  updateUI();
+}
+
+function showPage(id, tab) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  if (tab) tab.classList.add('active');
 }
 
 function showToast(msg, type) {
-    const t = document.getElementById('toast');
-    t.textContent = msg; t.className = 'show';
-    setTimeout(() => t.className = '', 2000);
-}
-
-// ── 5. 初始化 ──
-function initApp() {
-    console.log("App Initialized");
-    const sub = document.getElementById('market-status-sub');
-    const now = new Date();
-    sub.textContent = (now.getHours() >= 9 && now.getHours() < 14) ? "市場交易中 🟢" : "市場已收盤 🔴";
-    updateUI();
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'show ' + (type || '');
+  setTimeout(() => t.className = '', 2500);
 }
 
 function logout() {
-    if(confirm("登出？")) location.reload();
+  if(confirm("確定登出？")) location.reload();
 }
+
+window.onload = () => {
+  // 等待 Google 登入回調
+};
 </script>
 </body>
 </html>

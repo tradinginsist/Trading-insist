@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trading Insist — 模擬交易平台</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0a0e1a;--bg2:#0f1525;--bg3:#151d30;--border:#1e2d4a;
+    --accent:#00e5ff;--accent2:#7c3aed;--green:#00e676;--red:#ff1744;
+    --yellow:#ffd600;--text:#e8f0fe;--text2:#8899bb;--text3:#445577;
+    --card:#111827;--mono:'Space Mono',monospace;--sans:'Noto Sans TC',sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;overflow-x:hidden;}
+  body::before{content:'';position:fixed;inset:0;z-index:0;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:40px 40px;opacity:0.25;pointer-events:none;}
+
+  /* SETUP */
+  #setup-screen{display:none !important;}
+  .setup-box{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:2.5rem;width:500px;max-width:90vw;position:relative;z-index:1;}
+  .setup-logo{font-family:var(--mono);font-size:1.4rem;color:var(--accent);letter-spacing:3px;font-weight:700;margin-bottom:0.5rem;}
+  .setup-title{font-size:1.1rem;font-weight:900;margin-bottom:0.5rem;}
+  .setup-desc{font-size:0.85rem;color:var(--text2);line-height:1.7;margin-bottom:1.5rem;}
+  .setup-step{background:var(--bg3);border-radius:8px;padding:1rem;margin-bottom:0.75rem;font-size:0.83rem;color:var(--text2);line-height:1.7;border-left:3px solid var(--accent);}
+  .setup-step strong{color:var(--accent);}
+  .setup-link{color:var(--accent);text-decoration:underline;}
+  .setup-input{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:0.85rem 1rem;color:var(--text);font-family:var(--mono);font-size:0.85rem;outline:none;transition:border-color 0.2s;margin:1rem 0;}
+  .setup-input:focus{border-color:var(--accent);}
+  .btn-setup{width:100%;padding:0.9rem;background:var(--accent);color:#000;border:none;border-radius:8px;font-weight:900;font-size:1rem;cursor:pointer;font-family:var(--sans);transition:all 0.2s;}
+  .btn-setup:hover{background:#33eeff;}
+  .setup-note{font-size:0.72rem;color:var(--text3);text-align:center;margin-top:0.75rem;}
+
+  /* NAV */
+  nav{position:sticky;top:0;z-index:100;background:rgba(10,14,26,0.92);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 2rem;height:60px;}
+  .nav-logo{font-family:var(--mono);font-size:1.1rem;color:var(--accent);letter-spacing:2px;font-weight:700;}
+  .nav-logo span{color:var(--text2);}
+  .nav-tabs{display:flex;gap:0.25rem;}
+  .nav-tab{padding:0.4rem 1rem;border-radius:6px;cursor:pointer;font-size:0.85rem;color:var(--text2);border:none;background:none;transition:all 0.2s;font-family:var(--sans);}
+  .nav-tab:hover{color:var(--text);background:var(--bg3);}
+  .nav-tab.active{color:var(--accent);background:rgba(0,229,255,0.08);}
+  .nav-right{display:flex;align-items:center;gap:1rem;}
+  .nav-cash{font-family:var(--mono);font-size:0.85rem;color:var(--green);font-weight:700;}
+  .api-badge{font-size:0.7rem;font-family:var(--mono);padding:0.2rem 0.6rem;border-radius:4px;}
+  .api-ok{background:rgba(0,230,118,0.1);color:var(--green);}
+  .api-err{background:rgba(255,23,68,0.1);color:var(--red);}
+  .api-loading{background:rgba(255,214,0,0.1);color:var(--yellow);}
+
+  /* PAGES */
+  .page{display:none;padding:2rem;max-width:1400px;margin:0 auto;position:relative;z-index:1;}
+  .page.active{display:block;animation:fadeIn 0.3s ease;}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+  /* COMPONENTS */
+  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.5rem;}
+  .dash-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.5rem;}
+  .stat-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.25rem;}
+  .stat-label{font-size:0.7rem;text-transform:uppercase;letter-spacing:2px;color:var(--text3);font-family:var(--mono);margin-bottom:0.5rem;}
+  .stat-value{font-size:1.6rem;font-weight:900;font-family:var(--mono);}
+  .stat-sub{font-size:0.75rem;color:var(--text2);margin-top:0.25rem;font-family:var(--mono);}
+  .up{color:var(--green)}.down{color:var(--red)}.neutral{color:var(--accent)}
+  .dash-main{display:grid;grid-template-columns:1fr 320px;gap:1.5rem;}
+  table{width:100%;border-collapse:collapse;}
+  th{font-size:0.7rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);font-family:var(--mono);padding:0.6rem 0.75rem;text-align:left;border-bottom:1px solid var(--border);}
+  td{padding:0.75rem;font-size:0.88rem;border-bottom:1px solid rgba(30,45,74,0.5);}
+  tr:hover td{background:rgba(255,255,255,0.02);}
+  .stock-code{font-family:var(--mono);font-weight:700;color:var(--accent);}
+  .stock-name{color:var(--text2);font-size:0.8rem;}
+
+  /* TRADE */
+  .trade-grid{display:grid;grid-template-columns:420px 1fr;gap:1.5rem;}
+  .trade-form{display:flex;flex-direction:column;gap:1rem;}
+  .form-group{display:flex;flex-direction:column;gap:0.5rem;}
+  label{font-size:0.75rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);font-family:var(--mono);}
+  input,select{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:0.75rem 1rem;color:var(--text);font-size:0.9rem;font-family:var(--sans);transition:border-color 0.2s;outline:none;}
+  input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,229,255,0.1);}
+
+  /* STOCK SEARCH */
+  .search-wrap{position:relative;}
+  .search-input{width:100%;padding-right:3rem;}
+  .search-clear{position:absolute;right:0.75rem;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text3);cursor:pointer;font-size:1rem;line-height:1;padding:0.25rem;}
+  .search-clear:hover{color:var(--text);}
+  .search-dropdown{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--bg2);border:1px solid var(--border);border-radius:10px;z-index:50;max-height:200px;overflow-y:auto;box-shadow:0 8px 30px rgba(0,0,0,0.4);}
+  .search-item{padding:0.65rem 1rem;cursor:pointer;display:flex;justify-content:space-between;align-items:center;transition:background 0.15s;}
+  .search-item:hover,.search-item.selected{background:rgba(0,229,255,0.07);}
+  .search-item-code{font-family:var(--mono);font-size:0.85rem;color:var(--accent);font-weight:700;}
+  .search-item-name{font-size:0.82rem;color:var(--text2);}
+  .search-item-price{font-family:var(--mono);font-size:0.82rem;}
+  .search-empty{padding:1rem;text-align:center;color:var(--text3);font-size:0.83rem;}
+  .search-loading{padding:1rem;text-align:center;color:var(--text3);font-size:0.83rem;}
+
+  .btn{padding:0.85rem 1.5rem;border-radius:8px;border:none;font-size:0.9rem;font-weight:700;cursor:pointer;transition:all 0.2s;font-family:var(--sans);}
+  .btn-buy{background:var(--green);color:#000;}
+  .btn-buy:hover{background:#00ff88;transform:translateY(-1px);box-shadow:0 4px 20px rgba(0,230,118,0.3);}
+  .btn-sell{background:var(--red);color:#fff;}
+  .btn-sell:hover{background:#ff4444;transform:translateY(-1px);box-shadow:0 4px 20px rgba(255,23,68,0.3);}
+  .btn-row{display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;}
+  .price-display{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:1rem;display:flex;justify-content:space-between;align-items:center;}
+  .price-big{font-family:var(--mono);font-size:1.8rem;font-weight:700;}
+  .price-change{font-family:var(--mono);font-size:0.85rem;padding:0.25rem 0.6rem;border-radius:4px;}
+  .price-change.up{background:rgba(0,230,118,0.15);color:var(--green);}
+  .price-change.down{background:rgba(255,23,68,0.15);color:var(--red);}
+  .price-change.flat{background:rgba(136,153,187,0.15);color:var(--text2);}
+  .trade-summary{background:var(--bg3);border-radius:8px;padding:1rem;font-family:var(--mono);font-size:0.82rem;}
+  .ts-row{display:flex;justify-content:space-between;padding:0.3rem 0;border-bottom:1px solid var(--border);}
+  .ts-row:last-child{border-bottom:none;font-weight:700;}
+
+  /* MARKET WATCHLIST */
+  .watchlist-item{display:flex;justify-content:space-between;align-items:center;padding:0.55rem 0.75rem;border-radius:8px;cursor:pointer;transition:background 0.15s;border-bottom:1px solid rgba(30,45,74,0.4);}
+  .watchlist-item:hover{background:rgba(0,229,255,0.05);}
+  .watchlist-item:last-child{border-bottom:none;}
+
+  /* LEADERBOARD */
+  .lb-grid{display:grid;grid-template-columns:1fr 320px;gap:1.5rem;}
+  .rank-row{display:flex;align-items:center;gap:1rem;padding:1rem;border-radius:10px;border:1px solid var(--border);margin-bottom:0.5rem;background:var(--bg2);}
+  .rank-row.top1{border-color:var(--yellow);background:rgba(255,214,0,0.05);}
+  .rank-row.top2{border-color:#aaa;background:rgba(170,170,170,0.05);}
+  .rank-row.top3{border-color:#cd7f32;background:rgba(205,127,50,0.05);}
+  .rank-num{font-family:var(--mono);font-size:1.1rem;font-weight:700;width:2rem;text-align:center;}
+  .rank-avatar{width:40px;height:40px;border-radius:50%;background:var(--bg3);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:1.2rem;}
+  .rank-name{font-weight:700;font-size:0.95rem;}
+  .rank-sub{font-size:0.75rem;color:var(--text2);font-family:var(--mono);}
+  .rank-return{font-family:var(--mono);font-size:1.1rem;font-weight:700;margin-left:auto;}
+  .rank-badge{font-size:0.7rem;padding:0.2rem 0.5rem;border-radius:4px;background:rgba(0,229,255,0.1);color:var(--accent);font-family:var(--mono);}
+
+  /* LEARN */
+  .learn-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;}
+  .lesson-card{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;cursor:pointer;transition:all 0.2s;}
+  .lesson-card:hover{transform:translateY(-3px);box-shadow:0 8px 30px rgba(0,0,0,0.3);border-color:var(--accent2);}
+  .lesson-thumb{height:120px;display:flex;align-items:center;justify-content:center;font-size:3rem;}
+  .lesson-body{padding:1rem;}
+  .lesson-tag{font-size:0.65rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent2);font-family:var(--mono);margin-bottom:0.4rem;}
+  .lesson-title{font-size:0.95rem;font-weight:700;margin-bottom:0.4rem;}
+  .lesson-desc{font-size:0.8rem;color:var(--text2);line-height:1.5;}
+  .lesson-meta{display:flex;justify-content:space-between;align-items:center;margin-top:0.75rem;}
+  .lesson-time{font-size:0.72rem;color:var(--text3);font-family:var(--mono);}
+  .lesson-level{font-size:0.65rem;padding:0.2rem 0.5rem;border-radius:4px;font-family:var(--mono);}
+  .level-easy{background:rgba(0,230,118,0.1);color:var(--green);}
+  .level-mid{background:rgba(255,214,0,0.1);color:var(--yellow);}
+  .level-hard{background:rgba(255,23,68,0.1);color:var(--red);}
+
+  /* COMMUNITY */
+  .community-grid{display:grid;grid-template-columns:1fr 300px;gap:1.5rem;}
+  .post-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:1.25rem;margin-bottom:0.75rem;}
+  .post-header{display:flex;gap:0.75rem;align-items:center;margin-bottom:0.75rem;}
+  .post-avatar{width:36px;height:36px;border-radius:50%;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:1rem;}
+  .post-user{font-weight:700;font-size:0.88rem;}
+  .post-time{font-size:0.72rem;color:var(--text3);font-family:var(--mono);}
+  .post-content{font-size:0.88rem;line-height:1.6;color:var(--text2);margin-bottom:0.75rem;}
+  .post-tag{display:inline-block;font-size:0.7rem;padding:0.15rem 0.5rem;border-radius:4px;background:rgba(124,58,237,0.15);color:var(--accent2);font-family:var(--mono);margin-right:0.4rem;}
+  .post-actions{display:flex;gap:1rem;margin-top:0.6rem;}
+  .post-action{font-size:0.78rem;color:var(--text3);cursor:pointer;transition:color 0.2s;}
+  .post-action:hover{color:var(--accent);}
+  .new-post-area{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:1rem;}
+  textarea{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:0.75rem;color:var(--text);font-family:var(--sans);font-size:0.88rem;resize:none;outline:none;transition:border-color 0.2s;}
+  textarea:focus{border-color:var(--accent);}
+  .btn-post{background:var(--accent2);color:#fff;padding:0.5rem 1.25rem;border-radius:6px;border:none;font-size:0.85rem;font-weight:700;cursor:pointer;margin-top:0.5rem;font-family:var(--sans);transition:all 0.2s;}
+  .btn-post:hover{background:#6d28d9;}
+
+  /* MISC */
+  .page-header{margin-bottom:1.5rem;}
+  .page-title{font-size:1.5rem;font-weight:900;margin-bottom:0.25rem;}
+  .page-sub{font-size:0.85rem;color:var(--text2);}
+  .section-title{font-size:1rem;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:0.5rem;}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);display:inline-block;}
+  .dot.green{background:var(--green)}.dot.purple{background:var(--accent2);}
+  .divider{border:none;border-top:1px solid var(--border);margin:1rem 0;}
+  .tag{display:inline-block;font-size:0.7rem;padding:0.2rem 0.6rem;border-radius:4px;font-family:var(--mono);}
+  .tag-blue{background:rgba(0,229,255,0.1);color:var(--accent);}
+  .tag-purple{background:rgba(124,58,237,0.1);color:var(--accent2);}
+  .tag-green{background:rgba(0,230,118,0.1);color:var(--green);}
+  #toast{position:fixed;bottom:2rem;right:2rem;z-index:999;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:1rem 1.5rem;font-size:0.88rem;transform:translateY(100px);opacity:0;transition:all 0.3s;max-width:300px;}
+  #toast.show{transform:translateY(0);opacity:1;}
+  #toast.success{border-color:var(--green);color:var(--green);}
+  #toast.error{border-color:var(--red);color:var(--red);}
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;display:none;align-items:center;justify-content:center;}
+  .modal-overlay.show{display:flex;}
+  .modal{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:2rem;width:500px;max-width:90vw;animation:fadeIn 0.2s ease;}
+  .modal-title{font-size:1.1rem;font-weight:900;margin-bottom:1.25rem;}
+  .modal-close{float:right;background:none;border:none;color:var(--text3);cursor:pointer;font-size:1.2rem;}
+  .spinner{display:inline-block;width:10px;height:10px;border:2px solid rgba(255,214,0,0.3);border-top-color:var(--yellow);border-radius:50%;animation:spin 0.6s linear infinite;margin-right:4px;vertical-align:middle;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  ::-webkit-scrollbar{width:6px;}
+  ::-webkit-scrollbar-track{background:var(--bg);}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+  @media(max-width:900px){
+    .dash-grid{grid-template-columns:repeat(2,1fr)}
+    .dash-main,.trade-grid,.lb-grid,.community-grid{grid-template-columns:1fr}
+    .learn-grid{grid-template-columns:repeat(2,1fr)}
+  }
+</style>
+</head>
+<body>
+
+<!-- SETUP -->
+<div id="setup-screen">
+  <div class="setup-box">
+    <div class="setup-logo">TRADING <span style="color:var(--text2)">INSIST</span></div>
+    <div class="setup-title">連接真實台股報價</div>
+    <div class="setup-desc">本平台使用 Fugle 富果 API 串接即時台股報價。申請完全免費，只需 2 分鐘。</div>
+    <div class="setup-step"><strong>步驟 1：</strong> 前往 <a class="setup-link" href="https://developer.fugle.tw/docs/key/" target="_blank">developer.fugle.tw/docs/key/</a> 註冊富果會員（免費）</div>
+    <div class="setup-step"><strong>步驟 2：</strong> 登入後點「申請金鑰」→ 選擇免費「基本用戶」方案</div>
+    <div class="setup-step"><strong>步驟 3：</strong> 複製你的 API Key 貼到下方</div>
+    <input class="setup-input" id="api-key-input" placeholder="貼上你的 Fugle API Key" />
+    <button class="btn-setup" onclick="startWithKey()">開始使用真實報價 →</button>
+    <div class="setup-note">🔒 API Key 僅儲存於你的瀏覽器，不會上傳任何伺服器</div>
+  </div>
+</div>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">TRADING <span>INSIST</span></div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showPage('dashboard',this)">總覽</button>
+    <button class="nav-tab" onclick="showPage('trade',this)">交易</button>
+    <button class="nav-tab" onclick="showPage('leaderboard',this)">排行榜</button>
+    <button class="nav-tab" onclick="showPage('learn',this)">學習</button>
+    <button class="nav-tab" onclick="showPage('community',this)">社群</button>
+  </div>
+  <div class="nav-right">
+    <span id="api-badge" class="api-badge api-loading"><span class="spinner"></span>載入中</span>
+    <span class="nav-cash" id="nav-cash">$1,000,000</span>
+  </div>
+</nav>
+
+<!-- DASHBOARD -->
+<div class="page active" id="page-dashboard">
+  <div class="page-header">
+    <div class="page-title">早安，Alex 👋</div>
+    <div class="page-sub" id="market-status-sub">連線中...</div>
+  </div>
+  <div class="dash-grid">
+    <div class="stat-card"><div class="stat-label">總資產</div><div class="stat-value neutral" id="total-assets">$1,000,000</div><div class="stat-sub">虛擬新台幣</div></div>
+    <div class="stat-card"><div class="stat-label">未實現損益</div><div class="stat-value up" id="unrealized-pnl">$0</div><div class="stat-sub" id="unrealized-pct">0.00%</div></div>
+    <div class="stat-card"><div class="stat-label">持股數</div><div class="stat-value neutral" id="holding-count">0</div><div class="stat-sub">檔股票</div></div>
+    <div class="stat-card"><div class="stat-label">排行榜名次</div><div class="stat-value neutral" id="my-rank">#1</div><div class="stat-sub">共 <span id="total-players">1</span> 人參賽</div></div>
+  </div>
+  <div class="dash-main">
+    <div class="card">
+      <div class="section-title"><span class="dot"></span> 我的持倉</div>
+      <table><thead><tr><th>股票</th><th>持股</th><th>成本價</th><th>現價</th><th>損益</th><th>報酬率</th></tr></thead>
+        <tbody id="holdings-body"><tr><td colspan="6" style="text-align:center;color:var(--text3);padding:2rem;font-size:0.85rem;">尚無持倉 · 前往交易頁面搜尋股票</td></tr></tbody>
+      </table>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:1rem;">
+      <div class="card"><div class="section-title"><span class="dot green"></span> 最近查詢</div><div id="watchlist" style="font-size:0.83rem;color:var(--text3);">查詢股票後會出現在這裡</div></div>
+      <div class="card"><div class="section-title"><span class="dot purple"></span> 交易紀錄</div><div id="trade-log" style="font-size:0.8rem;color:var(--text2);">尚無交易紀錄</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- TRADE -->
+<div class="page" id="page-trade">
+  <div class="page-header"><div class="page-title">交易中心</div><div class="page-sub">輸入任何台灣上市櫃代碼或名稱搜尋</div></div>
+  <div class="trade-grid">
+    <div class="card">
+      <div class="section-title"><span class="dot"></span> 下單</div>
+      <div class="trade-form">
+
+        <div class="form-group">
+          <label>搜尋股票（代碼或名稱）</label>
+          <div class="search-wrap">
+            <div style="display:flex;gap:0.5rem;">
+              <div style="position:relative;flex:1;">
+                <input class="search-input" id="stock-search" type="text" placeholder="輸入代碼 2330 或名稱 台積電" autocomplete="off"
+                  oninput="onSearchInput()" onkeydown="onSearchKeydown(event)" style="width:100%;" />
+                <button class="search-clear" id="search-clear" onclick="clearSearch()" style="display:none;">✕</button>
+              </div>
+              <button onclick="triggerSearch()" style="padding:0 1.2rem;background:var(--accent);color:#000;border:none;border-radius:8px;font-weight:900;font-size:0.95rem;cursor:pointer;white-space:nowrap;flex-shrink:0;transition:background 0.2s;">查詢</button>
+            </div>
+            <div class="search-dropdown" id="search-dropdown" style="display:none;"></div>
+          </div>
+        </div>
+
+        <div class="price-display" id="price-display" style="display:none;">
+          <div>
+            <div style="font-size:0.72rem;color:var(--text3);font-family:var(--mono);margin-bottom:0.25rem;" id="price-type-label">現價</div>
+            <div class="price-big" id="current-price-display">—</div>
+          </div>
+          <div style="text-align:right;">
+            <div class="price-change flat" id="price-change-display">—</div>
+            <div style="font-size:0.8rem;font-weight:700;margin-top:0.25rem;" id="stock-name-display"></div>
+            <div style="font-size:0.72rem;color:var(--text3);font-family:var(--mono);" id="stock-code-display"></div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>張數（1張 = 1000股）</label>
+          <input type="number" id="trade-qty" min="1" placeholder="例：5（即 5000 股）" oninput="updateTradeSummary()">
+        </div>
+
+        <div class="trade-summary" id="trade-summary" style="display:none;">
+          <div class="ts-row"><span>股票</span><span id="ts-stock">—</span></div>
+          <div class="ts-row"><span>股數</span><span id="ts-qty">—</span></div>
+          <div class="ts-row"><span>單價</span><span id="ts-price">—</span></div>
+          <div class="ts-row"><span>金額</span><span id="ts-total">—</span></div>
+          <div class="ts-row"><span>手續費 0.1425%</span><span id="ts-fee">—</span></div>
+          <div class="ts-row"><span style="color:var(--accent)">實際需要</span><span id="ts-final" style="color:var(--accent)">—</span></div>
+        </div>
+
+        <div class="form-group">
+          <label>可用資金</label>
+          <div style="font-family:var(--mono);font-size:1rem;color:var(--green);padding:0.5rem 0;" id="available-cash">$1,000,000</div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-buy" onclick="executeTrade('buy')">買入</button>
+          <button class="btn btn-sell" onclick="executeTrade('sell')">賣出</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-title"><span class="dot"></span> 最近查詢 <span id="refresh-label" style="font-size:0.7rem;color:var(--text3);font-family:var(--mono);margin-left:auto;"></span></div>
+      <div id="market-watchlist-trade">
+        <div style="text-align:center;padding:2rem;color:var(--text3);font-size:0.85rem;">搜尋股票後會出現在這裡</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- LEADERBOARD -->
+<div class="page" id="page-leaderboard">
+  <div class="page-header"><div class="page-title">排行榜 🏆</div><div class="page-sub">本週競賽 · 週日 23:59 結算</div></div>
+  <div class="lb-grid">
+    <div><div id="leaderboard-list"></div></div>
+    <div style="display:flex;flex-direction:column;gap:1rem;">
+      <div class="card">
+        <div class="section-title"><span class="dot"></span> 本週獎勵</div>
+        <div style="font-size:0.88rem;color:var(--text2);line-height:1.8;">🥇 冠軍：免費進階課程一堂<br>🥈 亞軍：學習資料包<br>🥉 季軍：社群專屬徽章<hr class="divider"><span style="font-size:0.78rem;color:var(--text3);">報酬率 = (目前資產 - 100萬) ÷ 100萬 × 100%</span></div>
+      </div>
+      <div class="card">
+        <div class="section-title"><span class="dot green"></span> 我的成績</div>
+        <div style="text-align:center;padding:1rem 0;">
+          <div style="font-size:2.5rem;font-weight:900;font-family:var(--mono);" id="my-return-big">0.00%</div>
+          <div style="font-size:0.8rem;color:var(--text2);margin-top:0.5rem;">總報酬率</div>
+          <hr class="divider">
+          <div style="font-family:var(--mono);font-size:0.85rem;color:var(--text2);">目前排名 <span id="my-rank-big" style="color:var(--yellow);font-weight:700;">#1</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- LEARN -->
+<div class="page" id="page-learn">
+  <div class="page-header"><div class="page-title">學習中心 📚</div><div class="page-sub">從零開始，打造你的投資知識庫</div></div>
+  <div class="learn-grid">
+    <div class="lesson-card" onclick="showLesson('什麼是股票？')"><div class="lesson-thumb" style="background:linear-gradient(135deg,#1a1f35,#0f3460);">📈</div><div class="lesson-body"><div class="lesson-tag">基礎概念</div><div class="lesson-title">什麼是股票？</div><div class="lesson-desc">了解股票的本質、公司上市原因，以及投資人如何從中獲利。</div><div class="lesson-meta"><span class="lesson-time">⏱ 5分鐘</span><span class="lesson-level level-easy">入門</span></div></div></div>
+    <div class="lesson-card" onclick="showLesson('K線圖怎麼看？')"><div class="lesson-thumb" style="background:linear-gradient(135deg,#1a1f35,#1a0a2e);">🕯️</div><div class="lesson-body"><div class="lesson-tag">技術分析</div><div class="lesson-title">K線圖怎麼看？</div><div class="lesson-desc">K線是技術分析的基礎，學會看懂紅K、黑K，掌握市場情緒。</div><div class="lesson-meta"><span class="lesson-time">⏱ 8分鐘</span><span class="lesson-level level-mid">進階</span></div></div></div>
+    <div class="lesson-card" onclick="showLesson('本益比(P/E)入門')"><div class="lesson-thumb" style="background:linear-gradient(135deg,#0d2137,#0a3d2b);">📊</div><div class="lesson-body"><div class="lesson-tag">基本面</div><div class="lesson-title">本益比 (P/E) 入門</div><div class="lesson-desc">學會用本益比評估股票貴不貴，找到有潛力的標的。</div><div class="lesson-meta"><span class="lesson-time">⏱ 6分鐘</span><span class="lesson-level level-easy">入門</span></div></div></div>
+    <div class="lesson-card" onclick="showLesson('停損停利怎麼設？')"><div class="lesson-thumb" style="background:linear-gradient(135deg,#2d1515,#1f0a0a);">🛡️</div><div class="lesson-body"><div class="lesson-tag">風險管理</div><div class="lesson-title">停損停利怎麼設？</div><div class="lesson-desc">沒有紀律的交易等於賭博。學會設定停損，保護你的資本。</div><div class="lesson-meta"><span class="lesson-time">⏱ 7分鐘</span><span class="lesson-level level-mid">進階</span></div></div></div>
+    <div class="lesson-card" onclick="showLesson('移動平均線(MA)')"><div class="lesson-thumb" style="background:linear-gradient(135deg,#0a1f2e,#0a2e1f);">〰️</div><div class="lesson-body"><div class="lesson-tag">技術分析</div><div class="lesson-title">移動平均線 (MA)</div><div class="lesson-desc">MA5、MA20、MA60 各代表什麼？黃金交叉與死亡交叉。</div><div class="lesson-meta"><span class="lesson-time">⏱ 10分鐘</span><span class="lesson-level level-hard">高手</span></div></div></div>
+    <div class="lesson-card" onclick="showLesson('財報怎麼讀？')"><div class="lesson-thumb" style="background:linear-gradient(135deg,#1f1a0a,#2e280a);">📋</div><div class="lesson-body"><div class="lesson-tag">基本面</div><div class="lesson-title">財報怎麼讀？</div><div class="lesson-desc">損益表、資產負債表、現金流量表，三大財報快速解讀指南。</div><div class="lesson-meta"><span class="lesson-time">⏱ 12分鐘</span><span class="lesson-level level-hard">高手</span></div></div></div>
+  </div>
+</div>
+
+<!-- COMMUNITY -->
+<div class="page" id="page-community">
+  <div class="page-header"><div class="page-title">社群討論 💬</div><div class="page-sub">分享你的交易想法，和同學互相學習</div></div>
+  <div class="community-grid">
+    <div>
+      <div class="new-post-area">
+        <textarea id="post-input" rows="3" placeholder="分享你的交易想法、市場觀察..."></textarea>
+        <div style="display:flex;gap:0.5rem;margin-top:0.5rem;align-items:center;flex-wrap:wrap;">
+          <span class="tag tag-blue" style="cursor:pointer;" onclick="addTag('#台積電')">+ #台積電</span>
+          <span class="tag tag-purple" style="cursor:pointer;" onclick="addTag('#技術分析')">+ #技術分析</span>
+          <span class="tag tag-green" style="cursor:pointer;" onclick="addTag('#新手問題')">+ #新手問題</span>
+          <button class="btn-post" onclick="submitPost()" style="margin-left:auto;">發布</button>
+        </div>
+      </div>
+      <div id="posts-container"><div style="text-align:center;padding:3rem;color:var(--text3);font-size:0.88rem;">社群還沒有任何貼文<br>成為第一個分享想法的人 👆</div></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:1rem;">
+      <div class="card"><div class="section-title"><span class="dot purple"></span> 熱門標籤</div><div id="hot-topics" style="color:var(--text3);font-size:0.83rem;">發布貼文後自動統計</div></div>
+      <div class="card"><div class="section-title"><span class="dot green"></span> 我的貼文</div><div style="text-align:center;padding:0.5rem 0;"><span style="font-family:var(--mono);font-size:2rem;font-weight:700;color:var(--accent);" id="my-post-count">0</span><div style="font-size:0.78rem;color:var(--text3);margin-top:0.25rem;">篇</div></div></div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<div class="modal-overlay" id="lesson-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div class="modal-title" id="modal-title"></div>
+    <div id="modal-content" style="font-size:0.88rem;line-height:1.8;color:var(--text2);"></div>
+    <button class="btn btn-buy" style="margin-top:1.5rem;width:100%;" onclick="closeModal()">完成學習 ✓</button>
+  </div>
+</div>
+
+<script>
+const INITIAL_CASH = 1000000;
+let FUGLE_KEY = '9198e457-5aae-49e1-8672-bc46ffa9c4f1';
+let selectedStock = null; // {code, name, price, change, isRealtime}
+let recentQuotes = [];    // last searched stocks
+let state = { cash: INITIAL_CASH, holdings: {}, trades: [], posts: [] };
+let searchDebounce = null;
+let dropdownIndex = -1;
+let dropdownItems = [];
+
+// ── SETUP ──
+function startWithKey() {
+  const key = document.getElementById('api-key-input').value.trim();
+  if (!key) { alert('請先輸入 API Key'); return; }
+  FUGLE_KEY = key;
+  document.getElementById('setup-screen').style.display = 'none';
+  initApp();
+}
+
+// ── FUGLE API ──
+async function fetchQuote(code) {
+  try {
+    const r = await fetch(`https://api.fugle.tw/marketdata/v1.0/stock/intraday/quote/${code}`, {
+      headers: {'X-API-KEY': FUGLE_KEY}
+    });
+    if (!r.ok) throw new Error(r.status);
+    const d = await r.json();
+
+    // Fugle 在不同時段欄位不同，全部嘗試
+    const price =
+      d.lastPrice ??
+      d.closePrice ??
+      d.previousClose ??
+      d.referencePrice ??
+      d.price ??
+      (d.bids && d.bids[0] ? d.bids[0].price : null) ??
+      null;
+
+    const ref =
+      d.referencePrice ??
+      d.previousClose ??
+      d.closePrice ??
+      price;
+
+    const name = d.name ?? d.symbolName ?? d.stockName ?? code;
+    const change = (price && ref && ref !== 0) ? +((price - ref) / ref * 100).toFixed(2) : 0;
+    const diff   = (price && ref) ? +(price - ref).toFixed(2) : 0;
+    const isRealtime = !!d.lastPrice;
+
+    if (!price) console.warn('[' + code + '] No price. Keys:', Object.keys(d), JSON.stringify(d).slice(0, 300));
+
+    return { code, price, change, diff, name, isRealtime };
+  } catch(e) {
+    console.error('fetchQuote error [' + code + ']:', e.message);
+    return null;
+  }
+}
+
+// Search: first try exact code, then search endpoint
+async function searchStocks(query) {
+  const raw = query.trim();
+  if (!raw) return [];
+
+  // 純數字代碼：直接查 Fugle API
+  if (/^\d{4,5}$/.test(raw)) {
+    const q = await fetchQuote(raw);
+    if (q && q.price) return [q];
+    return [{code:raw, name:raw, price:null, change:0, diff:0, isRealtime:false}];
+  }
+
+  // 中文或英文名稱：從本地名單比對（保留原始大小寫比對中文）
+  const matches = COMMON_STOCKS.filter(s =>
+    s.name.includes(raw) || s.code.includes(raw)
+  ).slice(0, 8);
+
+  if (!matches.length) return [];
+
+  const results = [];
+  for (const s of matches.slice(0, 6)) {
+    const q = await fetchQuote(s.code);
+    if (q && q.price) results.push(q);
+    else results.push({code:s.code, name:s.name, price:null, change:0, diff:0, isRealtime:false});
+  }
+  return results;
+}
+
+// ── COMMON STOCKS LIST ──
+const COMMON_STOCKS = [
+  // 半導體
+  {code:'2330',name:'台積電'},{code:'2303',name:'聯電'},{code:'2454',name:'聯發科'},
+  {code:'3711',name:'日月光投控'},{code:'2408',name:'南亞科'},{code:'3034',name:'聯詠'},
+  {code:'2379',name:'瑞昱'},{code:'6415',name:'矽力-KY'},{code:'2344',name:'華邦電'},
+  {code:'2325',name:'矽品'},{code:'6770',name:'力積電'},{code:'6488',name:'環球晶'},
+  {code:'3443',name:'創意'},{code:'5274',name:'信驊'},{code:'3529',name:'力旺'},
+  {code:'4966',name:'譜瑞-KY'},{code:'3406',name:'玉晶光'},{code:'5269',name:'祥碩'},
+  // 電子/零組件
+  {code:'2317',name:'鴻海'},{code:'2382',name:'廣達'},{code:'2357',name:'華碩'},
+  {code:'2308',name:'台達電'},{code:'2395',name:'研華'},{code:'2376',name:'技嘉'},
+  {code:'2377',name:'微星'},{code:'2356',name:'英業達'},{code:'2347',name:'聯強'},
+  {code:'2353',name:'宏碁'},{code:'2352',name:'佳世達'},{code:'3231',name:'緯創'},
+  {code:'2324',name:'仁寶'},{code:'6669',name:'緯穎'},{code:'3017',name:'奇鋐'},
+  {code:'2360',name:'致茂'},{code:'4938',name:'和碩'},{code:'2474',name:'可成'},
+  {code:'3008',name:'大立光'},{code:'2409',name:'友達'},{code:'3481',name:'群創'},
+  {code:'2371',name:'大同'},{code:'3037',name:'欣興'},{code:'3044',name:'健鼎'},
+  {code:'2385',name:'群光'},{code:'2392',name:'正崴'},{code:'3260',name:'威剛'},
+  {code:'2368',name:'金像電'},{code:'6278',name:'台表科'},{code:'3706',name:'神達'},
+  // 電信
+  {code:'2412',name:'中華電'},{code:'3045',name:'台灣大'},{code:'4904',name:'遠傳'},
+  // 金融
+  {code:'2881',name:'富邦金'},{code:'2882',name:'國泰金'},{code:'2883',name:'開發金'},
+  {code:'2884',name:'玉山金'},{code:'2885',name:'元大金'},{code:'2886',name:'兆豐金'},
+  {code:'2887',name:'台新金'},{code:'2888',name:'新光金'},{code:'2890',name:'永豐金'},
+  {code:'2891',name:'中信金'},{code:'2892',name:'第一金'},{code:'5880',name:'合庫金'},
+  {code:'2880',name:'華南金'},{code:'2834',name:'臺企銀'},{code:'2801',name:'彰銀'},
+  {code:'2820',name:'華票'},{code:'5876',name:'上海商銀'},{code:'2812',name:'台中銀'},
+  // 傳產/化工/原料
+  {code:'1301',name:'台塑'},{code:'1303',name:'南亞'},{code:'1326',name:'台化'},
+  {code:'6505',name:'台塑化'},{code:'1101',name:'台泥'},{code:'1102',name:'亞泥'},
+  {code:'2002',name:'中鋼'},{code:'1216',name:'統一'},{code:'1104',name:'環泥'},
+  {code:'1605',name:'華新'},{code:'2006',name:'東和鋼鐵'},{code:'1402',name:'遠東新'},
+  {code:'1434',name:'福懋'},{code:'1702',name:'南僑'},{code:'1722',name:'台肥'},
+  {code:'1907',name:'永豐餘'},{code:'1314',name:'中石化'},
+  // 汽車/運輸/航運
+  {code:'2207',name:'和泰車'},{code:'2105',name:'正新'},{code:'2615',name:'萬海'},
+  {code:'2618',name:'長榮航'},{code:'2609',name:'陽明'},{code:'2603',name:'長榮'},
+  {code:'2610',name:'華航'},{code:'2606',name:'裕民'},{code:'2605',name:'新興'},
+  {code:'2201',name:'裕隆'},{code:'2204',name:'中華汽車'},
+  // 生技醫療
+  {code:'1789',name:'神隆'},{code:'4174',name:'浩鼎'},{code:'1762',name:'中化生'},
+  {code:'4147',name:'中裕'},{code:'6547',name:'晟德'},{code:'4763',name:'材料-KY'},
+  {code:'6589',name:'台康生技'},{code:'4968',name:'立積'},
+  // 其他
+  {code:'3702',name:'大聯大'},{code:'5871',name:'中租-KY'},{code:'9910',name:'豐泰'},
+  {code:'6409',name:'旭隼'},{code:'6736',name:'富邦媒'},{code:'2327',name:'國巨'},
+  {code:'2049',name:'上銀'},{code:'1590',name:'亞德客-KY'},{code:'6116',name:'彩晶'},
+  ,
+];
+
+// ── SEARCH UI ──
+async function triggerSearch() {
+  const q = document.getElementById('stock-search').value.trim();
+  if (!q) { showToast('請輸入股票代碼或名稱', 'error'); return; }
+  clearTimeout(searchDebounce);
+  showDropdownLoading();
+  const results = await searchStocks(q);
+  dropdownItems = results;
+  dropdownIndex = -1;
+  renderDropdown(results, q);
+  // If only one result, auto-select it
+  if (results.length === 1) {
+    await selectStockFromDropdown(results[0]);
+  }
+}
+
+async function onSearchInput() {
+  const q = document.getElementById('stock-search').value.trim();
+  const clearBtn = document.getElementById('search-clear');
+  clearBtn.style.display = q ? 'block' : 'none';
+
+  if (!q) { hideDropdown(); return; }
+
+  clearTimeout(searchDebounce);
+  showDropdownLoading();
+
+  searchDebounce = setTimeout(async () => {
+    const results = await searchStocks(q);
+    dropdownItems = results;
+    dropdownIndex = -1;
+    renderDropdown(results, q);
+  }, 400);
+}
+
+function onSearchKeydown(e) {
+  const dd = document.getElementById('search-dropdown');
+  if (dd.style.display === 'none') return;
+  if (e.key === 'ArrowDown') { e.preventDefault(); dropdownIndex = Math.min(dropdownIndex+1, dropdownItems.length-1); highlightDropdown(); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); dropdownIndex = Math.max(dropdownIndex-1, 0); highlightDropdown(); }
+  else if (e.key === 'Enter') { e.preventDefault(); if (dropdownIndex >= 0 && dropdownItems[dropdownIndex]) selectStockFromDropdown(dropdownItems[dropdownIndex]); else triggerSearch(); }
+  else if (e.key === 'Escape') hideDropdown();
+}
+
+function highlightDropdown() {
+  document.querySelectorAll('.search-item').forEach((el,i) => {
+    el.classList.toggle('selected', i === dropdownIndex);
+  });
+}
+
+function showDropdownLoading() {
+  const dd = document.getElementById('search-dropdown');
+  dd.style.display = 'block';
+  dd.innerHTML = '<div class="search-loading"><span class="spinner"></span>搜尋中...</div>';
+}
+
+function renderDropdown(results, query) {
+  const dd = document.getElementById('search-dropdown');
+  if (!results.length) {
+    dd.style.display = 'block';
+    dd.innerHTML = '<div class="search-empty">找不到符合的股票<br><span style="font-size:0.75rem;">請輸入正確的股票代碼（如 2330）或中文名稱</span></div>';
+    return;
+  }
+  dd.style.display = 'block';
+  dd.innerHTML = results.map((s,i) => `
+    <div class="search-item" onclick="selectStockFromDropdown(dropdownItems[${i}])">
+      <div><span class="search-item-code">${s.code}</span> <span class="search-item-name">${s.name}</span></div>
+      <div class="search-item-price ${s.price?(s.change>=0?'up':'down'):''}">
+        ${s.price ? '$'+s.price.toLocaleString() : '—'}
+        ${s.price && s.change !== 0 ? '<span style="font-size:0.72rem;margin-left:0.3rem;">'+(s.change>=0?'+':'')+s.change+'%</span>' : ''}
+      </div>
+    </div>`).join('');
+}
+
+function hideDropdown() {
+  document.getElementById('search-dropdown').style.display = 'none';
+  dropdownItems = []; dropdownIndex = -1;
+}
+
+function clearSearch() {
+  document.getElementById('stock-search').value = '';
+  document.getElementById('search-clear').style.display = 'none';
+  hideDropdown();
+  document.getElementById('price-display').style.display = 'none';
+  document.getElementById('trade-summary').style.display = 'none';
+  selectedStock = null;
+}
+
+async function selectStockFromDropdown(s) {
+  hideDropdown();
+  document.getElementById('stock-search').value = s.code + ' ' + s.name;
+  document.getElementById('search-clear').style.display = 'block';
+
+  // If no price yet, fetch now
+  let stock = s;
+  if (!stock.price) {
+    showToast('載入報價中...', '');
+    const q = await fetchQuote(s.code);
+    if (q) stock = q;
+  }
+
+  selectedStock = stock;
+  updatePriceDisplay();
+  addToRecentQuotes(stock);
+  renderWatchlist();
+}
+
+function updatePriceDisplay() {
+  const s = selectedStock;
+  const el = document.getElementById('price-display');
+  if (!s) { el.style.display='none'; return; }
+  el.style.display = 'flex';
+  if (!s.price) {
+    document.getElementById('current-price-display').textContent = '暫無資料';
+    document.getElementById('price-change-display').textContent = '—';
+    document.getElementById('price-change-display').className = 'price-change flat';
+    document.getElementById('stock-name-display').textContent = s.name;
+    document.getElementById('stock-code-display').textContent = s.code;
+    document.getElementById('price-type-label').textContent = '—';
+    return;
+  }
+  document.getElementById('current-price-display').textContent = '$'+s.price.toLocaleString();
+  const ch = document.getElementById('price-change-display');
+  const sign = s.change > 0 ? '+' : '';
+  ch.textContent = sign+s.change+'% ('+(s.change>=0?'+':'')+(s.diff??0)+')';
+  ch.className = 'price-change '+(s.change>0?'up':s.change<0?'down':'flat');
+  document.getElementById('stock-name-display').textContent = s.name;
+  document.getElementById('stock-code-display').textContent = s.code;
+  document.getElementById('price-type-label').textContent = s.isRealtime ? '⚡ 即時價' : '📅 收盤價';
+  updateTradeSummary();
+}
+
+function updateTradeSummary() {
+  const qty = parseInt(document.getElementById('trade-qty').value)||0;
+  const el = document.getElementById('trade-summary');
+  if (!selectedStock?.price || !qty) { el.style.display='none'; return; }
+  const s=selectedStock, shares=qty*1000, total=s.price*shares, fee=Math.max(20,total*0.001425);
+  el.style.display='block';
+  document.getElementById('ts-stock').textContent = s.name;
+  document.getElementById('ts-qty').textContent = shares.toLocaleString()+'股（'+qty+'張）';
+  document.getElementById('ts-price').textContent = '$'+s.price.toLocaleString();
+  document.getElementById('ts-total').textContent = '$'+total.toLocaleString();
+  document.getElementById('ts-fee').textContent = '$'+Math.round(fee).toLocaleString();
+  document.getElementById('ts-final').textContent = '$'+Math.round(total+fee).toLocaleString();
+}
+
+// ── RECENT QUOTES / WATCHLIST ──
+function addToRecentQuotes(s) {
+  recentQuotes = recentQuotes.filter(q=>q.code!==s.code);
+  recentQuotes.unshift(s);
+  if (recentQuotes.length > 8) recentQuotes = recentQuotes.slice(0,8);
+}
+
+function renderWatchlist() {
+  const els = [document.getElementById('watchlist'), document.getElementById('market-watchlist-trade')];
+  if (!recentQuotes.length) {
+    els.forEach(el=>{ if(el) el.innerHTML='<div style="font-size:0.83rem;color:var(--text3);">查詢股票後會出現在這裡</div>'; });
+    return;
+  }
+  const html = recentQuotes.map(s=>`
+    <div class="watchlist-item" onclick="quickSelect('${s.code}')">
+      <div><span class="stock-code" style="font-size:0.82rem;">${s.code}</span> <span class="stock-name">${s.name}</span></div>
+      <div style="text-align:right;">
+        <div class="${s.price?(s.change>=0?'up':'down'):''}" style="font-family:var(--mono);font-size:0.82rem;">${s.price?'$'+s.price.toLocaleString():'—'}</div>
+        ${s.price?'<div class="'+(s.change>=0?'up':'down')+'" style="font-family:var(--mono);font-size:0.72rem;">'+(s.change>=0?'+':'')+s.change+'%</div>':''}
+      </div>
+    </div>`).join('');
+  els.forEach(el=>{ if(el) el.innerHTML=html; });
+}
+
+async function quickSelect(code) {
+  showPage('trade', document.querySelectorAll('.nav-tab')[1]);
+  const existing = recentQuotes.find(q=>q.code===code);
+  if (existing) {
+    selectedStock = existing;
+    document.getElementById('stock-search').value = existing.code+' '+existing.name;
+    document.getElementById('search-clear').style.display = 'block';
+    updatePriceDisplay();
+  }
+  // Refresh price
+  const q = await fetchQuote(code);
+  if (q) {
+    selectedStock = q;
+    addToRecentQuotes(q);
+    renderWatchlist();
+    updatePriceDisplay();
+  }
+}
+
+// ── TRADE ──
+function executeTrade(type) {
+  const qty = parseInt(document.getElementById('trade-qty').value);
+  if (!selectedStock) { showToast('請先搜尋並選擇股票','error'); return; }
+  if (!qty||qty<=0) { showToast('請輸入張數','error'); return; }
+  if (!selectedStock.price) { showToast('股價尚未載入','error'); return; }
+  const s=selectedStock, shares=qty*1000, total=s.price*shares, fee=Math.max(20,total*0.001425);
+  if (type==='buy') {
+    if (state.cash < total+fee) { showToast('資金不足！','error'); return; }
+    state.cash -= (total+fee);
+    if (!state.holdings[s.code]) state.holdings[s.code]={shares:0,avgCost:0,name:s.name};
+    const h=state.holdings[s.code];
+    h.avgCost=(h.shares*h.avgCost+total)/(h.shares+shares);
+    h.shares+=shares;
+    state.trades.unshift({type:'buy',code:s.code,name:s.name,shares,price:s.price,time:new Date().toLocaleTimeString('zh-TW')});
+    showToast('✅ 買入 '+s.name+' '+qty+'張 @$'+s.price,'success');
+  } else {
+    if (!state.holdings[s.code]||state.holdings[s.code].shares<shares) { showToast('持股不足！','error'); return; }
+    const tax=total*0.003;
+    state.cash+=(total-fee-tax);
+    state.holdings[s.code].shares-=shares;
+    if (state.holdings[s.code].shares===0) delete state.holdings[s.code];
+    state.trades.unshift({type:'sell',code:s.code,name:s.name,shares,price:s.price,time:new Date().toLocaleTimeString('zh-TW')});
+    showToast('💰 賣出 '+s.name+' '+qty+'張 @$'+s.price,'success');
+  }
+  document.getElementById('trade-qty').value='';
+  document.getElementById('trade-summary').style.display='none';
+  updateDashboard();
+}
+
+// ── DASHBOARD ──
+function updateDashboard() {
+  document.getElementById('nav-cash').textContent='$'+Math.round(state.cash).toLocaleString();
+  document.getElementById('available-cash').textContent='$'+Math.round(state.cash).toLocaleString();
+  let totalValue=state.cash;
+  const keys=Object.keys(state.holdings);
+  keys.forEach(code=>{
+    const recent=recentQuotes.find(q=>q.code===code);
+    const p=recent?.price??state.holdings[code].avgCost;
+    totalValue+=p*state.holdings[code].shares;
+  });
+  const diff=totalValue-INITIAL_CASH, pct=(diff/INITIAL_CASH*100).toFixed(2);
+  document.getElementById('total-assets').textContent='$'+Math.round(totalValue).toLocaleString();
+  document.getElementById('total-assets').className='stat-value '+(diff>=0?'up':'down');
+  document.getElementById('unrealized-pnl').textContent=(diff>=0?'+':'')+'$'+Math.round(diff).toLocaleString();
+  document.getElementById('unrealized-pnl').className='stat-value '+(diff>=0?'up':'down');
+  document.getElementById('unrealized-pct').textContent=(diff>=0?'+':'')+pct+'%';
+  document.getElementById('holding-count').textContent=keys.length;
+  const rb=document.getElementById('my-return-big');
+  rb.textContent=(pct>=0?'+':'')+pct+'%';
+  rb.style.color=pct>=0?'var(--green)':'var(--red)';
+  renderLeaderboard(+pct);
+  // holdings
+  const tbody=document.getElementById('holdings-body');
+  if (!keys.length) {
+    tbody.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:2rem;font-size:0.85rem;">尚無持倉 · 前往交易頁面搜尋股票</td></tr>';
+  } else {
+    tbody.innerHTML=keys.map(code=>{
+      const h=state.holdings[code];
+      const recent=recentQuotes.find(q=>q.code===code);
+      const p=recent?.price??h.avgCost;
+      const pnl=p*h.shares-h.avgCost*h.shares, pp=(pnl/(h.avgCost*h.shares)*100).toFixed(2);
+      return `<tr>
+        <td><div class="stock-code">${code}</div><div class="stock-name">${h.name}</div></td>
+        <td style="font-family:var(--mono);">${(h.shares/1000).toFixed(0)}張</td>
+        <td style="font-family:var(--mono);">$${Math.round(h.avgCost).toLocaleString()}</td>
+        <td style="font-family:var(--mono);">${recent?.price?'$'+p.toLocaleString():'—'}</td>
+        <td class="${pnl>=0?'up':'down'}" style="font-family:var(--mono);">${pnl>=0?'+':''}$${Math.round(pnl).toLocaleString()}</td>
+        <td class="${pnl>=0?'up':'down'}" style="font-family:var(--mono);">${pnl>=0?'+':''}${pp}%</td>
+      </tr>`;
+    }).join('');
+  }
+  // trade log
+  document.getElementById('trade-log').innerHTML=state.trades.length===0
+    ?'<div style="color:var(--text3);">尚無交易紀錄</div>'
+    :state.trades.slice(0,5).map(t=>`
+      <div style="display:flex;justify-content:space-between;padding:0.35rem 0;border-bottom:1px solid rgba(30,45,74,0.4);">
+        <span><span class="${t.type==='buy'?'up':'down'}" style="font-family:var(--mono);font-weight:700;">${t.type==='buy'?'買':'賣'}</span>
+        <span style="margin:0 0.4rem;">${t.name}</span><span style="color:var(--text3);">${t.shares/1000}張</span></span>
+        <span style="font-family:var(--mono);color:var(--text3);">${t.time}</span>
+      </div>`).join('');
+}
+
+// ── LEADERBOARD — only you ──
+function renderLeaderboard(myRet) {
+  myRet = myRet ?? 0;
+  document.getElementById('my-rank').textContent = '#1';
+  document.getElementById('my-rank-big').textContent = '#1';
+  document.getElementById('total-players').textContent = '1';
+  const c = document.getElementById('leaderboard-list');
+  if (!c) return;
+  c.innerHTML = `
+    <div class="rank-row top1">
+      <div class="rank-num">🥇</div>
+      <div class="rank-avatar">⭐</div>
+      <div>
+        <div class="rank-name">Alex（你）</div>
+        <div class="rank-sub">${state.trades.length} 筆交易 · <span class="rank-badge">新手</span></div>
+      </div>
+      <div class="rank-return ${myRet>=0?'up':'down'}">${myRet>=0?'+':''}${myRet.toFixed(2)}%</div>
+    </div>
+    <div style="text-align:center;padding:2rem;color:var(--text3);font-size:0.85rem;">
+      邀請朋友加入，一起競爭排行榜 🚀<br>
+      <span style="font-size:0.75rem;">（多人功能開發中）</span>
+    </div>`;
+}
+
+// ── COMMUNITY ──
+function submitPost() {
+  const input=document.getElementById('post-input'), text=input.value.trim();
+  if (!text) { showToast('請輸入內容','error'); return; }
+  state.posts.unshift({user:'Alex（你）',avatar:'⭐',time:'剛剛',content:text,likes:0});
+  input.value=''; renderPosts(); updateHotTopics();
+  document.getElementById('my-post-count').textContent=state.posts.length;
+  showToast('✅ 發布成功！','success');
+}
+function addTag(tag) {
+  const i=document.getElementById('post-input');
+  if (!i.value.includes(tag)) i.value+=(i.value?' ':'')+tag;
+}
+function renderPosts() {
+  const c=document.getElementById('posts-container');
+  if (!state.posts.length) { c.innerHTML='<div style="text-align:center;padding:3rem;color:var(--text3);font-size:0.88rem;">社群還沒有任何貼文<br>成為第一個分享想法的人 👆</div>'; return; }
+  c.innerHTML=state.posts.map((p,i)=>`
+    <div class="post-card">
+      <div class="post-header"><div class="post-avatar">${p.avatar}</div>
+        <div><div class="post-user">${p.user}</div><div class="post-time">${p.time}</div></div></div>
+      <div class="post-content">${p.content}</div>
+      <div class="post-actions"><span class="post-action" onclick="likePost(${i})">👍 ${p.likes}</span><span class="post-action">💬 回覆</span></div>
+    </div>`).join('');
+}
+function likePost(i) { state.posts[i].likes++; renderPosts(); }
+function updateHotTopics() {
+  const tc={};
+  state.posts.forEach(p=>p.content.match(/#\S+/g)?.forEach(t=>{tc[t]=(tc[t]||0)+1;}));
+  const sorted=Object.entries(tc).sort((a,b)=>b[1]-a[1]).slice(0,4);
+  const c=document.getElementById('hot-topics');
+  if (!sorted.length) { c.textContent='發布貼文後自動統計'; return; }
+  c.innerHTML=sorted.map(([tag,cnt])=>`
+    <div style="display:flex;justify-content:space-between;padding:0.35rem 0;border-bottom:1px solid var(--border);font-size:0.83rem;">
+      <span style="color:var(--accent2);">${tag}</span><span style="color:var(--text3);font-family:var(--mono);">${cnt}</span>
+    </div>`).join('');
+}
+
+// ── LEARN ──
+const LESSONS={
+  '什麼是股票？':'<strong>股票（Stock）</strong>代表你持有一家公司的部分所有權。<br><br>公司需要資金成長時可以上市，把公司的一部分賣給投資人。<br><br><strong>你怎麼賺錢？</strong><br>1️⃣ <strong>價差</strong>：低買高賣<br>2️⃣ <strong>股息</strong>：公司每年分配利潤給股東<br><br>💡 持有台積電股票，就是持有這家全球最大晶片代工廠的一部分！',
+  'K線圖怎麼看？':'<strong>K線</strong>是最常用的股價視覺化工具。每根K線代表一段時間的價格變化：<br><br>📦 上影線：最高點<br>📦 實體：開盤到收盤<br>📦 下影線：最低點<br><br>🔴 <strong>紅K（陽線）</strong>：收盤 > 開盤，上漲<br>⚫ <strong>黑K（陰線）</strong>：收盤 < 開盤，下跌<br><br>💡 連續紅K代表買力強，連續黑K代表賣壓重。',
+  '本益比(P/E)入門':'<strong>本益比（P/E Ratio）</strong>評估股票是否划算的工具。<br><br><strong>公式：</strong> P/E = 股價 ÷ 每股盈餘(EPS)<br><br>📊 P/E 越低 → 相對便宜<br>📊 P/E 越高 → 市場對成長期待高<br><br>💡 一定要跟同產業比較才有意義！台積電P/E通常15-25倍。',
+  '停損停利怎麼設？':'<strong>停損</strong>是保護資本最重要的工具。<br><br>✂️ <strong>停損</strong>：虧損超過 -8%~-10% 就賣出<br>💰 <strong>停利</strong>：達到目標（如+20%）就部分賣出<br><br>💡 黃金法則：進場前先設好停損點，到了就執行，不要用感覺決策。',
+  '移動平均線(MA)':'<strong>移動平均線（MA）</strong>平滑化趨勢的指標。<br><br>📈 MA5：短期 · MA20：中期 · MA60：長期<br><br>🟡 <strong>黃金交叉</strong>：短線向上穿越長線 → 買進訊號<br>💀 <strong>死亡交叉</strong>：短線向下穿越長線 → 賣出訊號',
+  '財報怎麼讀？':'<strong>三大財報</strong>是分析公司基本面的必備工具：<br><br>📋 <strong>損益表</strong>：看營收成長、毛利率、淨利率<br>🏛️ <strong>資產負債表</strong>：看負債比率<br>💧 <strong>現金流量表</strong>：最難造假，看營業現金流是否為正<br><br>💡 帳面賺錢不代表真的有錢，現金流量表才是真相！',
+};
+function showLesson(t) { document.getElementById('modal-title').textContent=t; document.getElementById('modal-content').innerHTML=LESSONS[t]||''; document.getElementById('lesson-modal').classList.add('show'); }
+function closeModal() { document.getElementById('lesson-modal').classList.remove('show'); }
+document.getElementById('lesson-modal').addEventListener('click',function(e){if(e.target===this)closeModal();});
+
+// ── PAGES ──
+function showPage(id,tab) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  if (tab) tab.classList.add('active');
+}
+function showToast(msg,type) {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='show '+(type||'');
+  setTimeout(()=>t.className='',2500);
+}
+
+// ── INIT ──
+function initApp() {
+  setApiBadge('loading');
+  renderLeaderboard(0);
+  const now=new Date(), h=now.getHours(), m=now.getMinutes();
+  const isOpen=h>=9&&(h<13||(h===13&&m<=30));
+  const sub=document.getElementById('market-status-sub');
+  if (sub) sub.textContent=isOpen?'台股交易中 🟢 · 搜尋任何股票查看即時報價':'台股已收盤 🔴 · 搜尋股票查看今日收盤價';
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.search-wrap')) hideDropdown();
+  });
+  // 啟動時測試 API 並自動找到正確欄位
+  testAndCalibrateAPI();
+}
+
+async function testAndCalibrateAPI() {
+  try {
+    const r = await fetch('https://api.fugle.tw/marketdata/v1.0/stock/intraday/quote/2330', {
+      headers: {'X-API-KEY': FUGLE_KEY}
+    });
+    if (!r.ok) {
+      setApiBadge('err');
+      showToast('API Key 錯誤，請確認 Key 是否正確', 'error');
+      return;
+    }
+    const d = await r.json();
+    console.log('[API Test] 2330 回傳欄位:', Object.keys(d));
+    console.log('[API Test] 完整資料:', JSON.stringify(d).slice(0, 500));
+
+    // 找到有效的價格欄位
+    const priceFields = ['lastPrice','closePrice','previousClose','referencePrice','price'];
+    for (const f of priceFields) {
+      if (d[f] && typeof d[f] === 'number') {
+        console.log('[API Test] 有效價格欄位:', f, '=', d[f]);
+        break;
+      }
+    }
+    setApiBadge('ok');
+  } catch(e) {
+    setApiBadge('err');
+    console.error('[API Test] 連線失敗:', e.message);
+    showToast('無法連接 Fugle API', 'error');
+  }
+}
+
+function setApiBadge(s) {
+  const el=document.getElementById('api-badge');
+  if (s==='ok') { el.className='api-badge api-ok'; el.innerHTML='● 已連線'; }
+  else if (s==='err') { el.className='api-badge api-err'; el.innerHTML='✕ 錯誤'; }
+  else { el.className='api-badge api-loading'; el.innerHTML='<span class="spinner"></span>載入中'; }
+}
+
+// Auto-start
+initApp();
+</script>
+</body>
+</html>
